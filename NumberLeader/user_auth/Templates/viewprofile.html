@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+    <link rel="stylesheet" href="../static/css/profile.css">
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    {% csrf_token %}
+</head>
+<body>
+    <div>
+         <img  class ='image' src="{% static 'image/logo.jpeg' %}">
+    </div>
+    <div class="nav">
+      <a href="{% url 'home' %}"><div>Home</div></a>
+      <div>About</div>
+      <a href="{% url 'financial-details' %}"> <div>Mini-Questionare</div></a>
+        <a href="{% url 'financial_data_screener' %}"><div> Investors Query</div></a>
+      <a href="{% url 'custom' %}"><div class="profile">Profile</div></a>
+    </div>
+    <div class="main">
+        <h1 class="profil">Profile</h1>
+
+        <form action="#" method="post" enctype="multipart/form-data" onsubmit="submitForm(event)">
+            <div class="forma">
+                <div class="buttons">
+                    <button type="button" onclick="toggleEditable()">Update Profile</button>
+                    <button type="submit" id="submitBtn" style="display: none;">Submit</button>
+                </div>
+                <h2 class="Sdetails">Signup Details</h2>
+                <label>Username</label><br>
+                <input type="text" placeholder="username" name="username" id="username" readonly><br>
+                <label>Email</label> <br>
+                <input type="email" placeholder="Enter your mail" name="email" id="email" readonly><br>
+
+                <h2 class="Sdetails">StartUp Details</h2>
+                <label>Company Name</label><br>
+                <input type="text" placeholder="Startup Name" name="startup_name" id="startup_name" readonly><br>
+                <label>Website</label> <br>
+                <input type="text" placeholder="Website Url" name="website" id="website" readonly><br>
+                <label>Introductory Video</label><br>
+                <input type="text" placeholder="Introductory Video" name="introductory_video" id="introductory_video" readonly><br>
+
+                <h2 class="Sdetails">Co-Founder Details</h2>
+
+                <!-- Co-founder table -->
+                <table class="co-founder-table" id="co-founder-table">
+                    <caption>Co-Founders</caption>
+                    <thead>
+                        <tr>
+                            <th>Co-founder Name</th>
+                            <th>LinkedIn Profile</th>
+                            <th>Introduction</th>
+                            <th>Profile Photo</th>
+                            <th>Email</th>
+                            <th>Phone Number</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Initial co-founder input fields -->
+                        <tr>
+                            <td><input type="text" placeholder="Name" name="co_founder" readonly></td>
+                            <td><input type="url" placeholder="Linked Url" name="linkedin_profile" readonly></td>
+                            <td><input type="text" placeholder="Introduction" name="introduction" readonly></td>
+                            <td><input type="file" name="profile_photo" accept="image/*" readonly></td>
+                            <td><input type="email" placeholder="Email" name="cofounder_email" readonly></td>
+                            <td><input type="text" placeholder="Enter PhoneNumber" name="phone_number" pattern="[0-9]{10}" title="Please enter a 10-digit number" readonly></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+
+            </div>
+        </form>
+
+        <script>
+            var password
+            function toggleEditable() {
+                const inputFields = document.querySelectorAll('.forma input:not([type="submit"])');
+                const submitBtn = document.getElementById('submitBtn');
+
+                inputFields.forEach((field) => {
+                    field.readOnly = !field.readOnly;
+                });
+
+                // Show the submit button when fields become editable
+                submitBtn.style.display = 'block';
+            }
+
+            // Function to fetch data from the API endpoint
+            async function fetchData() {
+                try {
+                    const response = await fetch("{% url 'custom-user-detail' %}"); // Use the Django template tag to generate the API endpoint URL
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    return null;
+                }
+            }
+
+            // Function to populate the form with data
+            async function populateForm() {
+                const apiResponse = await fetchData();
+
+                if (apiResponse) {
+                    for (const key in apiResponse) {
+                        const element = document.getElementById(key);
+                        if (element) {
+                            element.value = apiResponse[key];
+                        }
+                    }
+                }
+            }
+
+            // Trigger the populateForm function when the DOM content is loaded
+            document.addEventListener('DOMContentLoaded', populateForm);
+
+            // Function to submit the form data
+            function submitForm(event) {
+                event.preventDefault();
+
+                // Collect updated values from input fields
+                const updatedData = {
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    startup_name: document.getElementById('startup_name').value,
+                    website: document.getElementById('website').value,
+                    introductory_video: document.getElementById('introductory_video').value,
+                    co_founders: [
+                        {
+                            name: document.getElementsByName('co_founder')[0].value,
+                            linkedin_profile: document.getElementsByName('linkedin_profile')[0].value,
+                            introduction: document.getElementsByName('introduction')[0].value,
+                            email: document.getElementsByName('cofounder_email')[0].value,
+                            phone_number: document.getElementsByName('phone_number')[0].value,
+                            // Add other co-founder fields as needed
+                        }
+                        // Add more co-founder objects if there are multiple co-founders
+                    ],
+                    // Add other fields as needed
+
+                };
+
+                fetch("{% url 'custom-user-detail' %}", {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    body: JSON.stringify(updatedData),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                    // You can add logic for handling success, e.g., show a success message
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    // You can add logic for handling errors, e.g., show an error message
+                });
+            }
+            function getCSRFToken() {
+                var csrfTokenElement = document.getElementsByName("csrfmiddlewaretoken")[0];
+                return csrfTokenElement.value;
+            }
+        </script>
+    </div>
+</body>
+</html>
